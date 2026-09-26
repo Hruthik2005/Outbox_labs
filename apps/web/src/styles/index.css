@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#FAFAFA] text-[#09090B] font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Subtle Caarvn-inspired concentric circular ornamental background */
+.caarvn-bg-pattern {
+  background-color: #FAFAFA;
+  background-image: radial-gradient(circle at 50% 30%, rgba(24, 24, 27, 0.035) 0, rgba(24, 24, 27, 0.035) 1px, transparent 1px),
+                    radial-gradient(circle at 50% 30%, rgba(24, 24, 27, 0.02) 0, transparent 400px),
+                    radial-gradient(circle at 50% 30%, rgba(24, 24, 27, 0.015) 0, transparent 800px);
+  background-size: 24px 24px, 100% 100%, 100% 100%;
+}
+
+/* Glassmorphism card subtle style */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(228, 228, 231, 0.8);
+}
+
+/* Scrollbar polish */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4D4D8;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A1A1AA;
+}

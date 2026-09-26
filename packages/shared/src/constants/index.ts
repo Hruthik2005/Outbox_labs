@@ -1,0 +1,58 @@
+export const EMAIL_STATUS = {
+  SCHEDULED: 'SCHEDULED',
+  QUEUED: 'QUEUED',
+  PROCESSING: 'PROCESSING',
+  SENT: 'SENT',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+  UNKNOWN_RECONCILE: 'UNKNOWN_RECONCILE'
+} as const;
+
+export type EmailStatus = typeof EMAIL_STATUS[keyof typeof EMAIL_STATUS];
+
+export const CAMPAIGN_STATUS = {
+  DRAFT: 'DRAFT',
+  SCHEDULED: 'SCHEDULED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  FAILED: 'FAILED'
+} as const;
+
+export type CampaignStatus = typeof CAMPAIGN_STATUS[keyof typeof CAMPAIGN_STATUS];
+
+export const EMAIL_EVENT_TYPE = {
+  SCHEDULED: 'SCHEDULED',
+  QUEUED: 'QUEUED',
+  SEND_ATTEMPT: 'SEND_ATTEMPT',
+  SENT: 'SENT',
+  FAILED: 'FAILED',
+  RATE_LIMITED_RESCHEDULED: 'RATE_LIMITED_RESCHEDULED',
+  CANCELLED: 'CANCELLED',
+  RECONCILED: 'RECONCILED'
+} as const;
+
+export type EmailEventType = typeof EMAIL_EVENT_TYPE[keyof typeof EMAIL_EVENT_TYPE];
+
+export const OUTBOX_EVENT_TYPE = {
+  EMAIL_SCHEDULE: 'EMAIL_SCHEDULE',
+  EMAIL_CANCEL: 'EMAIL_CANCEL'
+} as const;
+
+export type OutboxEventType = typeof OUTBOX_EVENT_TYPE[keyof typeof OUTBOX_EVENT_TYPE];
+
+export const QUEUE_NAME = {
+  EMAIL_QUEUE: 'email-scheduler-queue'
+} as const;
+
+export const DEFAULT_LIMITS = {
+  WORKER_CONCURRENCY: 5,
+  MIN_DELAY_MS: 2000,
+  HOURLY_LIMIT: 100,
+  RATE_LIMIT_WINDOW_SECONDS: 3600,
+  OUTBOX_POLL_INTERVAL_MS: 2000
+} as const;
+
+export const ELASTICSEARCH_INDEX = {
+  EMAILS: 'reachinbox_emails'
+} as const;

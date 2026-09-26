@@ -1,0 +1,120 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: reachinbox_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret_password
+      MYSQL_DATABASE: reachinbox
+      MYSQL_USER: reachinbox
+      MYSQL_PASSWORD: reachinbox_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - reachinbox_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "reachinbox", "-preachinbox_secret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: reachinbox_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec --save 60 1
+    ports:
+      - "6379:6379"
+    volumes:
+      - reachinbox_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: reachinbox_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - reachinbox_es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.api
+    container_name: reachinbox_api
+    restart: unless-stopped
+    ports:
+      - "8383:8383"
+    environment:
+      - NODE_ENV=production
+      - API_PORT=8383
+      - DATABASE_URL=mysql://reachinbox:reachinbox_secret@mysql:3306/reachinbox
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - WEB_ORIGIN=http://localhost:5173
+      - API_BASE_URL=http://localhost:8383
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.worker
+    container_name: reachinbox_worker
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://reachinbox:reachinbox_secret@mysql:3306/reachinbox
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - WORKER_CONCURRENCY=5
+      - MIN_EMAIL_DELAY_MS=2000
+      - MAX_EMAILS_PER_HOUR_PER_SENDER=100
+      - RATE_LIMIT_WINDOW_SECONDS=3600
+      - OUTBOX_POLL_INTERVAL_MS=2000
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.web
+    container_name: reachinbox_web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  reachinbox_mysql_data:
+  reachinbox_redis_data:
+  reachinbox_es_data:
