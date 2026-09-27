@@ -2,12 +2,23 @@ import { EmailStatus, CampaignStatus, EmailEventType, OutboxEventType } from '..
 
 export interface UserProfile {
   id: string;
-  googleId: string;
+  googleId?: string | null;
   name: string;
   email: string;
   avatarUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
 }
 
 export interface SenderDto {

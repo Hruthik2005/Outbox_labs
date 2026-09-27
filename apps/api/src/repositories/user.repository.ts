@@ -35,6 +35,20 @@ export class UserRepository {
       }
     });
   }
+
+  async createWithPassword(data: {
+    name: string;
+    email: string;
+    passwordHash: string;
+  }): Promise<User> {
+    return prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        passwordHash: data.passwordHash
+      }
+    });
+  }
 }
 
 export const userRepository = new UserRepository();

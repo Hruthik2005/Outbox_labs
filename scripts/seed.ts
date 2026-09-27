@@ -26,8 +26,12 @@ async function main() {
 
   // 1. Create or update Demo User
   const user = await prisma.user.upsert({
-    where: { email: 'vvce23cse0102@vvce.ac.in' },
-    update: {},
+    where: { id: 'user_reachinbox_demo_01' },
+    update: {
+      email: 'vvce23cse0102@vvce.ac.in',
+      name: 'Hruthik (VVCE)',
+      googleId: 'google_oauth_vvce23cse0102'
+    },
     create: {
       id: 'user_reachinbox_demo_01',
       googleId: 'google_oauth_vvce23cse0102',
@@ -60,39 +64,45 @@ async function main() {
     }
   }
 
-  // 3. Create Default Sender Account
-  const sender = await prisma.sender.create({
-    data: {
-      userId: user.id,
-      name: 'ReachInbox Outreach Team',
-      email: etherealUser,
-      host: etherealHost,
-      port: etherealPort,
-      encryptedUsername: encrypt(etherealUser),
-      encryptedPassword: encrypt(etherealPass),
-      secure: false,
-      hourlyLimit: 100,
-      minimumDelaySeconds: 2,
-      isActive: true
-    }
-  });
+  // 3. Create or find Default Sender Account
+  let sender = await prisma.sender.findFirst({ where: { userId: user.id } });
+  if (!sender) {
+    sender = await prisma.sender.create({
+      data: {
+        userId: user.id,
+        name: 'ReachInbox Outreach Team',
+        email: etherealUser,
+        host: etherealHost,
+        port: etherealPort,
+        encryptedUsername: encrypt(etherealUser),
+        encryptedPassword: encrypt(etherealPass),
+        secure: false,
+        hourlyLimit: 100,
+        minimumDelaySeconds: 2,
+        isActive: true
+      }
+    });
+  }
 
-  console.log(`✅ Sender account created: ${sender.name} (${sender.email}) on ${sender.host}:${sender.port}`);
+  console.log(`✅ Sender account ready: ${sender.name} (${sender.email}) on ${sender.host}:${sender.port}`);
 
-  // 4. Create Initial Campaign
-  const campaign = await prisma.campaign.create({
-    data: {
-      userId: user.id,
-      senderId: sender.id,
-      subject: 'Welcome to ReachInbox Email Scheduler',
-      body: '<p>Hello,</p><p>This is a scheduled demonstration outreach email processed with BullMQ and MySQL.</p>',
-      startAt: new Date(),
-      minimumDelaySeconds: 2,
-      hourlyLimit: 100,
-      totalRecipients: 3,
-      status: 'SCHEDULED'
-    }
-  });
+  // 4. Create Initial Campaign if none exists
+  let campaign = await prisma.campaign.findFirst({ where: { userId: user.id } });
+  if (!campaign) {
+    campaign = await prisma.campaign.create({
+      data: {
+        userId: user.id,
+        senderId: sender.id,
+        subject: 'Welcome to ReachInbox Email Scheduler',
+        body: '<p>Hello,</p><p>This is a scheduled demonstration outreach email processed with BullMQ and MySQL.</p>',
+        startAt: new Date(),
+        minimumDelaySeconds: 2,
+        hourlyLimit: 100,
+        totalRecipients: 3,
+        status: 'SCHEDULED'
+      }
+    });
+  }
 
   // 5. Create Sample Email Records
   const recipients = ['sarah.connor@example.com', 'alex.rivera@enterprise.org', 'jordan.lee@techcorp.io'];
@@ -101,25 +111,29 @@ async function main() {
     const r = recipients[i];
     const emailId = crypto.randomUUID();
     const isPast = i === 0;
+    const idempotencyKey = crypto.createHash('sha256').update(`${campaign.id}:${r}:${i}`).digest('hex');
 
-    await prisma.email.create({
-      data: {
-        id: emailId,
-        userId: user.id,
-        campaignId: campaign.id,
-        senderId: sender.id,
-        recipient: r,
-        subject: campaign.subject,
-        body: campaign.body,
-        scheduledAt: new Date(Date.now() + (i * 2000)),
-        status: isPast ? 'SENT' : 'SCHEDULED',
-        idempotencyKey: crypto.createHash('sha256').update(`${campaign.id}:${r}:${i}`).digest('hex'),
-        bullJobId: emailId,
-        sentAt: isPast ? new Date() : null,
-        providerMessageId: isPast ? `<msg-${emailId}@reachinbox.test>` : null,
-        etherealPreviewUrl: isPast ? 'https://ethereal.email/message/WaQKMgKddxQDoou...preview' : null
-      }
-    });
+    const existingEmail = await prisma.email.findUnique({ where: { idempotencyKey } });
+    if (!existingEmail) {
+      await prisma.email.create({
+        data: {
+          id: emailId,
+          userId: user.id,
+          campaignId: campaign.id,
+          senderId: sender.id,
+          recipient: r,
+          subject: campaign.subject,
+          body: campaign.body,
+          scheduledAt: new Date(Date.now() + (i * 2000)),
+          status: isPast ? 'SENT' : 'SCHEDULED',
+          idempotencyKey,
+          bullJobId: emailId,
+          sentAt: isPast ? new Date() : null,
+          providerMessageId: isPast ? `<msg-${emailId}@reachinbox.test>` : null,
+          etherealPreviewUrl: isPast ? 'https://ethereal.email/message/WaQKMgKddxQDoou...preview' : null
+        }
+      });
+    }
   }
 
   console.log('✅ Seed email records inserted.');

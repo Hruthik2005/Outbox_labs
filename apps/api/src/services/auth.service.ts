@@ -52,6 +52,87 @@ export class AuthService {
     };
   }
 
+  async register(data: { name: string; email: string; password: string }): Promise<{ token: string; user: UserProfile }> {
+    const email = data.email.trim().toLowerCase();
+    if (!email || !data.password || !data.name) {
+      throw new Error('Name, email, and password are required');
+    }
+
+    const existing = await userRepository.findByEmail(email);
+    if (existing) {
+      throw new Error('An account with this email already exists. Please sign in.');
+    }
+
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(data.password, salt, 64).toString('hex');
+    const passwordHash = `${salt}:${hash}`;
+
+    const user = await userRepository.createWithPassword({
+      name: data.name.trim(),
+      email,
+      passwordHash
+    });
+
+    const token = signToken({
+      userId: user.id,
+      email: user.email
+    });
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        googleId: user.googleId,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString()
+      }
+    };
+  }
+
+  async login(data: { email: string; password: string }): Promise<{ token: string; user: UserProfile }> {
+    const email = data.email.trim().toLowerCase();
+    const user = await userRepository.findByEmail(email);
+    if (!user) {
+      throw new Error('Invalid email or password');
+    }
+
+    if (!user.passwordHash) {
+      throw new Error('This account was created via Google Sign-In. Please sign in with Google.');
+    }
+
+    const [salt, key] = user.passwordHash.split(':');
+    if (!salt || !key) {
+      throw new Error('Invalid credentials format');
+    }
+
+    const hash = crypto.scryptSync(data.password, salt, 64).toString('hex');
+    const match = crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(key, 'hex'));
+    if (!match) {
+      throw new Error('Invalid email or password');
+    }
+
+    const token = signToken({
+      userId: user.id,
+      email: user.email
+    });
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        googleId: user.googleId,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString()
+      }
+    };
+  }
+
   async getProfile(userId: string): Promise<UserProfile | null> {
     const user = await userRepository.findById(userId);
     if (!user) return null;

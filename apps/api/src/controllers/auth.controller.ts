@@ -42,6 +42,52 @@ export class AuthController {
     }
   }
 
+  async register(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { name, email, password } = req.body;
+      if (!name || !email || !password) {
+        sendError(res, 'Name, email, and password are required', 400, 'VALIDATION_ERROR');
+        return;
+      }
+
+      const { token, user } = await authService.register({ name, email, password });
+
+      res.cookie('reachinbox_session', token, {
+        httpOnly: true,
+        secure: env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+
+      sendSuccess(res, { token, user }, 201);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        sendError(res, 'Email and password are required', 400, 'VALIDATION_ERROR');
+        return;
+      }
+
+      const { token, user } = await authService.login({ email, password });
+
+      res.cookie('reachinbox_session', token, {
+        httpOnly: true,
+        secure: env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+
+      sendSuccess(res, { token, user });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.userId) {

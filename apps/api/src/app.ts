@@ -61,6 +61,21 @@ export function createApp(): Express {
 
   app.use('/admin/queues', protectBullBoard, serverAdapter.getRouter());
 
+  app.get('/', (_req, res) => {
+    res.json({
+      name: 'ReachInbox Email Job Scheduler API',
+      status: 'UP',
+      version: '1.0.0',
+      endpoints: {
+        health: '/api/health',
+        auth: '/api/auth',
+        emails: '/api/emails',
+        bullBoard: '/admin/queues',
+        frontend: env.WEB_ORIGIN
+      }
+    });
+  });
+
   app.use('/api/health', healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/emails', emailRoutes);
