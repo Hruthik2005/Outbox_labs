@@ -30,7 +30,7 @@ export class SlackNotificationService {
     windowKey: string;
     nextWindowTimestamp: number;
   }): Promise<boolean> {
-    const dedupKey = `slack_alert:${params.senderId}:${params.windowKey}`;
+    const dedupKey = `slack_alert:${params.senderId}:${params.limit}:${params.windowKey}`;
 
     // Atomically check and claim notification right for this window (1 hour TTL)
     const claimed = await redis.set(dedupKey, '1', 'EX', workerConfig.RATE_LIMIT_WINDOW_SECONDS, 'NX');
@@ -51,47 +51,16 @@ export class SlackNotificationService {
 
     try {
       const accessToken = decrypt(slackConn.encryptedAccessToken);
-      const resumeTime = new Date(params.nextWindowTimestamp).toISOString();
-      const text = `⚠️ *Rate Limit Alert*: Sender *${params.senderName}* (<${params.senderEmail}>) has reached its configured limit of *${params.limit} emails/hour*. Remaining jobs have been safely rescheduled to resume at *${resumeTime}*.`;
+      const resumeTime = new Date(params.nextWindowTimestamp).toLocaleTimeString();
+      const text = `⚠️ *Rate Limit Reached*: Sender *${params.senderName}* reached limit of *${params.limit} email(s)/hour*. Remaining jobs rescheduled to resume at *${resumeTime}*.`;
 
       const blocks = [
         {
-          type: 'header',
-          text: {
-            type: 'plain_text',
-            text: '⚠️ ReachInbox Rate Limit Reached',
-            emoji: true
-          }
-        },
-        {
           type: 'section',
-          fields: [
-            {
-              type: 'mrkdwn',
-              text: `*Sender:*\n${params.senderName} (${params.senderEmail})`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*Configured Limit:*\n${params.limit} emails/hour`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*Time Reached:*\n${new Date().toLocaleTimeString()} UTC`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*Rescheduled Window:*\n${resumeTime}`
-            }
-          ]
-        },
-        {
-          type: 'context',
-          elements: [
-            {
-              type: 'mrkdwn',
-              text: 'ℹ️ No emails were dropped. BullMQ delayed jobs are safely preserved in Redis.'
-            }
-          ]
+          text: {
+            type: 'mrkdwn',
+            text: `⚠️ *Hourly Rate Limit Reached*\n*Sender:* ${params.senderName} (${params.senderEmail})\n*Configured Limit:* ${params.limit} email(s)/hour\n*Status:* Remaining jobs rescheduled safely to resume at *${resumeTime}* (No emails dropped)`
+          }
         }
       ];
 
@@ -103,7 +72,7 @@ export class SlackNotificationService {
         });
       } else {
         const client = new WebClient(accessToken);
-        const channel = slackConn.channelId || '#general';
+        const channel = slackConn.channelId || '#reachinbox-alerts';
         await client.chat.postMessage({
           channel,
           text,
@@ -186,6 +155,60 @@ export class SlackNotificationService {
       return true;
     } catch (error) {
       logger.warn({ error, userId: params.userId }, 'Failed to deliver email sent Slack notification');
+      return false;
+    }
+  }
+
+  /**
+   * Send notification to Slack when an email send fails.
+   */
+  async notifyEmailFailed(params: {
+    userId: string;
+    recipient: string;
+    subject: string;
+    senderName: string;
+    senderEmail: string;
+    error: string;
+  }): Promise<boolean> {
+    const slackConn = await prisma.slackConnection.findUnique({
+      where: { userId: params.userId }
+    });
+
+    if (!slackConn) return false;
+
+    try {
+      const accessToken = decrypt(slackConn.encryptedAccessToken);
+      const text = `❌ Email delivery failed for *${params.recipient}* - "${params.subject}"`;
+      const blocks: any[] = [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `❌ *Email Delivery Failed*\n*To:* \`${params.recipient}\`\n*Subject:* ${params.subject}\n*From:* ${params.senderName} (${params.senderEmail})\n*Error:* \`${params.error}\``
+          }
+        }
+      ];
+
+      if (accessToken.startsWith('http')) {
+        await fetch(accessToken, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, blocks })
+        });
+      } else {
+        const client = new WebClient(accessToken);
+        const channel = slackConn.channelId || '#reachinbox-alerts';
+        await client.chat.postMessage({
+          channel,
+          text,
+          blocks: blocks as never
+        });
+      }
+
+      logger.info({ recipient: params.recipient, error: params.error }, 'Sent email failure Slack notification');
+      return true;
+    } catch (error) {
+      logger.warn({ error, userId: params.userId }, 'Failed to deliver email failure Slack notification');
       return false;
     }
   }

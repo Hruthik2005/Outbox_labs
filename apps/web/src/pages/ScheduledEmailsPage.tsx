@@ -164,8 +164,17 @@ export const ScheduledEmailsPage: React.FC = () => {
                     <td className="px-5 py-3.5 text-zinc-600 whitespace-nowrap">
                       {new Date(email.scheduledAt).toLocaleString()}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3.5 space-y-1">
                       <StatusBadge status={email.status} />
+                      {email.lastError && (
+                        <div
+                          className="flex items-center gap-1 text-[11px] text-amber-700 font-medium max-w-[220px] truncate"
+                          title={email.lastError}
+                        >
+                          <span className="shrink-0">⚠️</span>
+                          <span className="truncate">{email.lastError}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-right whitespace-nowrap">
                       {['SCHEDULED', 'QUEUED'].includes(email.status) && (

@@ -54,6 +54,17 @@ export class EmailService {
         }
       });
 
+      // Update sender's configured rate limits in database so sender reflects campaign configuration
+      if (data.hourlyLimit || data.minimumDelaySeconds !== undefined) {
+        await tx.sender.update({
+          where: { id: data.senderId },
+          data: {
+            ...(data.hourlyLimit ? { hourlyLimit: data.hourlyLimit } : {}),
+            ...(data.minimumDelaySeconds !== undefined ? { minimumDelaySeconds: data.minimumDelaySeconds } : {})
+          }
+        });
+      }
+
       // Prepare email records with staggered scheduledAt times and unique idempotency keys
       const emailRecords = uniqueRecipients.map((recipient, index) => {
         const emailId = crypto.randomUUID();
@@ -95,7 +106,9 @@ export class EmailService {
           body: data.body,
           idempotencyKey: e.idempotencyKey,
           attemptNumber: 0,
-          scheduledAt: e.scheduledAt.toISOString()
+          scheduledAt: e.scheduledAt.toISOString(),
+          hourlyLimit: data.hourlyLimit || sender.hourlyLimit,
+          minimumDelaySeconds: data.minimumDelaySeconds ?? sender.minimumDelaySeconds
         };
 
         return {

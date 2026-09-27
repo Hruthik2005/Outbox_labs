@@ -51,20 +51,23 @@ export async function processEmailJob(job: Job<EmailJobData>): Promise<EmailJobR
   }
 
   // 3. Enforce distributed minimum send delay interval for this sender
+  const delaySec = data.minimumDelaySeconds ?? sender.minimumDelaySeconds;
   await rateLimitService.enforceMinimumSendDelay(
     sender.id,
-    sender.minimumDelaySeconds * 1000
+    delaySec * 1000
   );
 
   // 4. Check Redis-backed distributed hourly rate limit
+  const effectiveLimit = data.hourlyLimit ?? sender.hourlyLimit;
   const rateLimit = await rateLimitService.checkAndIncrementHourlyLimit(
     sender.id,
-    sender.hourlyLimit
+    effectiveLimit
   );
 
   // If rate limit has been reached: SAFE RESCHEDULING
   if (!rateLimit.allowed) {
     const nextWindow = new Date(rateLimit.nextWindowTimestamp);
+    const reason = `Hourly rate limit of ${rateLimit.limit} email(s)/hour reached for sender ${sender.name}. Rescheduled safely to resume at ${nextWindow.toLocaleTimeString()}.`;
     logger.warn(
       {
         senderId: sender.id,
@@ -72,14 +75,14 @@ export async function processEmailJob(job: Job<EmailJobData>): Promise<EmailJobR
         currentCount: rateLimit.currentCount,
         nextWindow: nextWindow.toISOString()
       },
-      'Sender hourly rate limit reached; rescheduling job safely to next window'
+      reason
     );
 
-    // Release lock in MySQL and set scheduledAt to next window
+    // Release lock in MySQL, set lastError, and set scheduledAt to next window
     await idempotencyService.releaseLockForRescheduling(
       data.emailId,
       nextWindow,
-      `Hourly limit of ${rateLimit.limit} reached for sender ${sender.name}`
+      reason
     );
 
     // Trigger deduplicated Slack alert
@@ -111,7 +114,8 @@ export async function processEmailJob(job: Job<EmailJobData>): Promise<EmailJobR
       success: false,
       emailId: data.emailId,
       rescheduled: true,
-      rescheduledFor: nextWindow.toISOString()
+      rescheduledFor: nextWindow.toISOString(),
+      error: reason
     };
   }
 
@@ -132,7 +136,7 @@ export async function processEmailJob(job: Job<EmailJobData>): Promise<EmailJobR
     sendResult.success ? new Date().toISOString() : null
   );
 
-  // 7. Notify Slack workspace of successful delivery
+  // 7. Notify Slack workspace
   if (sendResult.success) {
     await slackNotificationService.notifyEmailSent({
       userId: data.userId,
@@ -141,6 +145,15 @@ export async function processEmailJob(job: Job<EmailJobData>): Promise<EmailJobR
       senderName: sender.name,
       senderEmail: sender.email,
       previewUrl: sendResult.previewUrl
+    });
+  } else {
+    await slackNotificationService.notifyEmailFailed({
+      userId: data.userId,
+      recipient: data.recipient,
+      subject: data.subject,
+      senderName: sender.name,
+      senderEmail: sender.email,
+      error: sendResult.error || 'SMTP delivery failure'
     });
   }
 

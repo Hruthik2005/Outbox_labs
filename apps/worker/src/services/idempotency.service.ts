@@ -67,7 +67,8 @@ export class IdempotencyService {
         where: { id: emailId },
         data: {
           status: EMAIL_STATUS.SCHEDULED,
-          scheduledAt: nextScheduledTime
+          scheduledAt: nextScheduledTime,
+          lastError: reason
         }
       });
 

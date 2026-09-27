@@ -85,6 +85,8 @@ export interface EmailJobData {
   idempotencyKey: string;
   attemptNumber: number;
   scheduledAt: string;
+  hourlyLimit?: number;
+  minimumDelaySeconds?: number;
 }
 
 export interface EmailJobResult {
