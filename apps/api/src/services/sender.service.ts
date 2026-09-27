@@ -34,23 +34,44 @@ export class SenderService {
   }
 
   async createSender(userId: string, data: CreateSenderRequest): Promise<SenderDto> {
+    let effectiveUsername = data.username.trim();
+
     // 1. Verify SMTP connection before storing
-    const isValid = await testSmtpConnection({
+    let isValid = await testSmtpConnection({
       host: data.host,
       port: data.port,
       secure: data.secure,
       auth: {
-        user: data.username,
+        user: effectiveUsername,
         pass: data.password
       }
     });
 
+    // If initial verification failed but email is provided and differs from username, test with email
+    if (!isValid && data.email && data.email.includes('@') && effectiveUsername !== data.email.trim()) {
+      const fallbackOk = await testSmtpConnection({
+        host: data.host,
+        port: data.port,
+        secure: data.secure,
+        auth: {
+          user: data.email.trim(),
+          pass: data.password
+        }
+      });
+      if (fallbackOk) {
+        effectiveUsername = data.email.trim();
+        isValid = true;
+      }
+    }
+
     if (!isValid) {
-      throw new Error('SMTP connection verification failed. Please check host, port, username, and password.');
+      throw new Error(
+        'SMTP connection verification failed. Please verify that SMTP Username is your full email address (e.g. napoleon.schaefer@ethereal.email) and your password is correct.'
+      );
     }
 
     // 2. Encrypt credentials with AES-256-GCM
-    const encryptedUsername = encrypt(data.username);
+    const encryptedUsername = encrypt(effectiveUsername);
     const encryptedPassword = encrypt(data.password);
 
     const sender = await senderRepository.create({

@@ -253,9 +253,16 @@ export const SendersPage: React.FC = () => {
             <Input
               label="Sender Email Address"
               type="email"
-              placeholder="outreach@company.com"
+              placeholder="napoleon.schaefer@ethereal.email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  email: val,
+                  username: (!prev.username || prev.username === prev.email) ? val : prev.username
+                }));
+              }}
               required
             />
           </div>
@@ -284,7 +291,8 @@ export const SendersPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="SMTP Username"
-              placeholder="Username or Ethereal account"
+              placeholder="e.g. napoleon.schaefer@ethereal.email"
+              helperText="Must be your Ethereal email address, not display name"
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               required
