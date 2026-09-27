@@ -24,7 +24,10 @@ export function createApp(): Express {
 
   app.use(
     helmet({
-      contentSecurityPolicy: false
+      contentSecurityPolicy: false,
+      frameguard: false,
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: false
     })
   );
 
@@ -59,7 +62,13 @@ export function createApp(): Express {
     res.status(401).send('Unauthorized: Admin access key required to view BullMQ Dashboard');
   };
 
-  app.use('/admin/queues', protectBullBoard, serverAdapter.getRouter());
+  const allowIframeMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
+    res.removeHeader('X-Frame-Options');
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost:5173 http://localhost:3000 *");
+    next();
+  };
+
+  app.use('/admin/queues', allowIframeMiddleware, protectBullBoard, serverAdapter.getRouter());
 
   app.get('/', (_req, res) => {
     res.json({

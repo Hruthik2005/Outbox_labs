@@ -272,12 +272,11 @@ export const QueueMonitorPage: React.FC = () => {
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
-        <div className="h-[620px] w-full bg-zinc-100 relative">
+        <div className="h-[640px] w-full bg-zinc-50 relative">
           <iframe
-            src="http://localhost:8383/admin/queues"
+            src="http://localhost:8383/admin/queues/"
             title="BullMQ Dashboard"
-            className="w-full h-full border-0"
-            onError={() => {}}
+            className="w-full h-full border-0 rounded-b-2xl"
           />
         </div>
       </div>
