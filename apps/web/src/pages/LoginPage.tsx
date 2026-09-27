@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { authApi } from '../services/auth-api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Send, ShieldCheck, Mail, Lock, UserCheck, ArrowRight } from 'lucide-react';
+import { Send, ShieldCheck, Lock, UserCheck, ArrowRight } from 'lucide-react';
 
 interface LoginPageProps {
   defaultMode?: 'login' | 'signup';
@@ -16,7 +15,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ defaultMode }) => {
   const initialMode = defaultMode || (location.pathname === '/signup' ? 'signup' : 'login');
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
 
-  const { loginWithGoogle, loginWithPassword, registerWithPassword, setUser } = useAuth();
+  const { loginWithGoogle, loginWithPassword, registerWithPassword } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -25,7 +24,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ defaultMode }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   // Handle email/password sign up and login
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,30 +54,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ defaultMode }) => {
       showToast(errorMsg, 'error');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // Quick access for local dev/review without requiring Google Cloud Console keys
-  const handleQuickDemoLogin = async () => {
-    setIsDemoLoading(true);
-    try {
-      const demoEmail = 'vvce23cse0102@vvce.ac.in';
-      localStorage.setItem('reachinbox_token', 'demo_dev_session_token_reachinbox_2026');
-      setUser({
-        id: 'user_reachinbox_demo_01',
-        googleId: 'google_oauth_vvce23cse0102',
-        name: 'Hruthik (VVCE)',
-        email: demoEmail,
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-      showToast('Logged in to ReachInbox Workspace as vvce23cse0102@vvce.ac.in', 'success');
-      navigate('/dashboard');
-    } catch {
-      showToast('Could not complete quick access login', 'error');
-    } finally {
-      setIsDemoLoading(false);
     }
   };
 
@@ -135,7 +109,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ defaultMode }) => {
             {mode === 'signup' && (
               <Input
                 label="Full Name"
-                placeholder="e.g. Hruthik"
+                placeholder="e.g. Alex Morgan"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -145,7 +119,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ defaultMode }) => {
             <Input
               label="Email Address"
               type="email"
-              placeholder="vvce23cse0102@vvce.ac.in"
+              placeholder="alex@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -216,18 +190,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ defaultMode }) => {
                 />
               </svg>
               {mode === 'signup' ? 'Sign up with Google' : 'Sign in with Google'}
-            </Button>
-
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              className="w-full gap-2 text-zinc-900 border border-zinc-200"
-              onClick={handleQuickDemoLogin}
-              isLoading={isDemoLoading}
-            >
-              <Mail className="h-4 w-4" />
-              Quick Access: vvce23cse0102@vvce.ac.in
             </Button>
           </div>
 

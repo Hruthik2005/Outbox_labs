@@ -133,15 +133,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white shrink-0">
-                {user?.name?.charAt(0).toUpperCase() || 'H'}
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             )}
             <div className="min-w-0 text-left">
               <p className="text-xs font-semibold text-zinc-900 truncate">
-                {user?.name || 'Hruthik (VVCE)'}
+                {user?.name || 'Workspace User'}
               </p>
               <p className="text-[11px] text-zinc-400 truncate">
-                {user?.email || 'vvce23cse0102@vvce.ac.in'}
+                {user?.email || 'user@company.com'}
               </p>
             </div>
           </div>

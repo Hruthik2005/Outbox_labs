@@ -28,15 +28,15 @@ async function main() {
   const user = await prisma.user.upsert({
     where: { id: 'user_reachinbox_demo_01' },
     update: {
-      email: 'vvce23cse0102@vvce.ac.in',
-      name: 'Hruthik (VVCE)',
-      googleId: 'google_oauth_vvce23cse0102'
+      email: 'demo@reachinbox.io',
+      name: 'Workspace Lead',
+      googleId: 'google_oauth_demo_user'
     },
     create: {
       id: 'user_reachinbox_demo_01',
-      googleId: 'google_oauth_vvce23cse0102',
-      name: 'Hruthik (VVCE)',
-      email: 'vvce23cse0102@vvce.ac.in',
+      googleId: 'google_oauth_demo_user',
+      name: 'Workspace Lead',
+      email: 'demo@reachinbox.io',
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
     }
   });

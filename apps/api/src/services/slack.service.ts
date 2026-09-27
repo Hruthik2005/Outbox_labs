@@ -104,7 +104,7 @@ export class SlackService {
     try {
       const accessToken = decrypt(connection.encryptedAccessToken);
       const user = await prisma.user.findUnique({ where: { id: userId } });
-      const userEmail = user?.email || 'vvce23cse0102@vvce.ac.in';
+      const userEmail = user?.email || 'user@example.com';
       const text = `✅ ReachInbox Slack Integration Verified for ${userEmail}`;
 
       const blocks = [
