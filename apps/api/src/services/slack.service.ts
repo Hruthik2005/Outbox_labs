@@ -95,6 +95,73 @@ export class SlackService {
     return true;
   }
 
+  async sendTestNotification(userId: string): Promise<{ success: boolean; message: string }> {
+    const connection = await prisma.slackConnection.findUnique({ where: { userId } });
+    if (!connection) {
+      return { success: false, message: 'No Slack workspace connected for this user' };
+    }
+
+    try {
+      const { WebClient } = await import('@slack/web-api');
+      const accessToken = decrypt(connection.encryptedAccessToken);
+      const client = new WebClient(accessToken);
+      const channel = connection.channelId || '#general';
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const userEmail = user?.email || 'vvce23cse0102@vvce.ac.in';
+
+      await client.chat.postMessage({
+        channel,
+        text: `✅ ReachInbox Slack Integration Verified for ${userEmail}`,
+        blocks: [
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: '🔔 ReachInbox Slack Integration Test',
+              emoji: true
+            }
+          },
+          {
+            type: 'section',
+            fields: [
+              {
+                type: 'mrkdwn',
+                text: `*Status:*\n✅ Connected & Verified`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Target Account:*\n${userEmail}`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Workspace:*\n${connection.teamName}`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Channel:*\n${connection.channelName || channel}`
+              }
+            ]
+          },
+          {
+            type: 'context',
+            elements: [
+              {
+                type: 'mrkdwn',
+                text: '⚡ Real-time alerts will automatically notify this channel when email rate limits are triggered.'
+              }
+            ]
+          }
+        ]
+      });
+
+      return { success: true, message: `Test message posted to Slack workspace (${connection.teamName})` };
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      return { success: false, message: `Slack delivery failed: ${errorMsg}` };
+    }
+  }
+
   async getDecryptedToken(userId: string) {
     const connection = await prisma.slackConnection.findUnique({ where: { userId } });
     if (!connection) return null;

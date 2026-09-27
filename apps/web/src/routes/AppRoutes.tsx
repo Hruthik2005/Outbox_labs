@@ -11,6 +11,7 @@ import { SentEmailsPage } from '../pages/SentEmailsPage';
 import { ComposeEmailPage } from '../pages/ComposeEmailPage';
 import { SendersPage } from '../pages/SendersPage';
 import { SettingsPage } from '../pages/SettingsPage';
+import { QueueMonitorPage } from '../pages/QueueMonitorPage';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -27,11 +28,14 @@ export const AppRoutes: React.FC = () => {
       {/* Protected Dashboard Routes */}
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/compose" element={<ComposeEmailPage />} />
+        <Route path="/campaign-builder" element={<ComposeEmailPage />} />
         <Route path="/scheduled" element={<ScheduledEmailsPage />} />
         <Route path="/sent" element={<SentEmailsPage />} />
-        <Route path="/compose" element={<ComposeEmailPage />} />
         <Route path="/senders" element={<SendersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/integrations" element={<SettingsPage />} />
+        <Route path="/queue-monitor" element={<QueueMonitorPage />} />
       </Route>
 
       {/* Catch-all */}

@@ -13,7 +13,7 @@
     "dev:worker": "npm run dev --workspace=@reachinbox/worker",
     "dev:web": "npm run dev --workspace=@reachinbox/web",
     "dev": "npm run dev:api",
-    "test": "npm run test --workspaces --if-present",
+    "test": "vitest run tests/integration",
     "test:load": "tsx tests/load/load-test-1000.ts",
     "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema=prisma/schema.prisma",

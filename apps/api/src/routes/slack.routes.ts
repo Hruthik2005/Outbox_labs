@@ -8,5 +8,6 @@ router.get('/connect', requireAuth, (req, res, next) => slackController.connect(
 router.get('/callback', (req, res, next) => slackController.callback(req, res, next));
 router.get('/status', requireAuth, (req, res, next) => slackController.getStatus(req, res, next));
 router.post('/disconnect', requireAuth, (req, res, next) => slackController.disconnect(req, res, next));
+router.post('/test', requireAuth, (req, res, next) => slackController.sendTestAlert(req, res, next));
 
 export default router;

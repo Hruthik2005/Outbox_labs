@@ -59,6 +59,20 @@ export class SlackController {
       next(err);
     }
   }
+
+  async sendTestAlert(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.userId!;
+      const result = await slackService.sendTestNotification(userId);
+      if (!result.success) {
+        sendError(res, result.message, 400, 'SLACK_SEND_FAILED');
+        return;
+      }
+      sendSuccess(res, { message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const slackController = new SlackController();

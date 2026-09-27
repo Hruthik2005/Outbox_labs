@@ -17,19 +17,19 @@ export const LoginPage: React.FC = () => {
     setIsDemoLoading(true);
     try {
       // In development, authenticate or seed test user
-      const demoEmail = 'test.user@reachinbox.internal';
+      const demoEmail = 'vvce23cse0102@vvce.ac.in';
       // Store mock/dev session token
       localStorage.setItem('reachinbox_token', 'demo_dev_session_token_reachinbox_2026');
       setUser({
         id: 'user_reachinbox_demo_01',
-        googleId: 'google_demo_10101',
-        name: 'Alex Mercer (Demo)',
+        googleId: 'google_oauth_vvce23cse0102',
+        name: 'Hruthik (VVCE)',
         email: demoEmail,
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
-      showToast('Logged in to ReachInbox Workspace', 'success');
+      showToast('Logged in to ReachInbox Workspace as vvce23cse0102@vvce.ac.in', 'success');
       navigate('/dashboard');
     } catch {
       showToast('Could not complete quick demo login', 'error');

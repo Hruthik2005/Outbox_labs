@@ -26,13 +26,13 @@ async function main() {
 
   // 1. Create or update Demo User
   const user = await prisma.user.upsert({
-    where: { email: 'alex.mercer@reachinbox.internal' },
+    where: { email: 'vvce23cse0102@vvce.ac.in' },
     update: {},
     create: {
       id: 'user_reachinbox_demo_01',
-      googleId: 'google_oauth_seed_10101',
-      name: 'Alex Mercer',
-      email: 'alex.mercer@reachinbox.internal',
+      googleId: 'google_oauth_vvce23cse0102',
+      name: 'Hruthik (VVCE)',
+      email: 'vvce23cse0102@vvce.ac.in',
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
     }
   });

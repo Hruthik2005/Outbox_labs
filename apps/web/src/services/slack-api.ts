@@ -14,5 +14,10 @@ export const slackApi = {
 
   async disconnect(): Promise<void> {
     await apiClient.post('/slack/disconnect');
+  },
+
+  async sendTestAlert(): Promise<{ message: string }> {
+    const res = await apiClient.post<ApiResponse<{ message: string }>>('/slack/test');
+    return res.data.data!;
   }
 };

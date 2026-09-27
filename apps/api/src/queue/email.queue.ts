@@ -61,3 +61,26 @@ export async function removeEmailJob(jobId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Get live BullMQ queue metrics for monitoring dashboard
+ */
+export async function getQueueMetrics() {
+  const [waiting, active, delayed, completed, failed, isPaused] = await Promise.all([
+    emailQueue.getWaitingCount(),
+    emailQueue.getActiveCount(),
+    emailQueue.getDelayedCount(),
+    emailQueue.getCompletedCount(),
+    emailQueue.getFailedCount(),
+    emailQueue.isPaused()
+  ]);
+
+  return {
+    waiting,
+    active,
+    delayed,
+    completed,
+    failed,
+    isPaused
+  };
+}

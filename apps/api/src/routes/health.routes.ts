@@ -30,4 +30,19 @@ router.get('/', async (_req, res) => {
   sendSuccess(res, status, healthy ? 200 : 503);
 });
 
+router.get('/queue', async (_req, res) => {
+  try {
+    const { getQueueMetrics } = await import('../queue/email.queue.js');
+    const metrics = await getQueueMetrics();
+    sendSuccess(res, {
+      queueName: 'email-scheduler-queue',
+      ...metrics,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ success: false, error: { message: errorMsg } });
+  }
+});
+
 export default router;
