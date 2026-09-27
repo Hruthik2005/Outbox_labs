@@ -64,13 +64,13 @@ async function main() {
     }
   }
 
-  // 3. Create or find Default Sender Account
+  // 3. Create or update Default Sender Account
   let sender = await prisma.sender.findFirst({ where: { userId: user.id } });
   if (!sender) {
     sender = await prisma.sender.create({
       data: {
         userId: user.id,
-        name: 'ReachInbox Outreach Team',
+        name: 'Napoleon Schaefer',
         email: etherealUser,
         host: etherealHost,
         port: etherealPort,
@@ -79,6 +79,19 @@ async function main() {
         secure: false,
         hourlyLimit: 100,
         minimumDelaySeconds: 2,
+        isActive: true
+      }
+    });
+  } else {
+    sender = await prisma.sender.update({
+      where: { id: sender.id },
+      data: {
+        name: 'Napoleon Schaefer',
+        email: etherealUser,
+        host: etherealHost,
+        port: etherealPort,
+        encryptedUsername: encrypt(etherealUser),
+        encryptedPassword: encrypt(etherealPass),
         isActive: true
       }
     });
