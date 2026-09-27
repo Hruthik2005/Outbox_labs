@@ -16,7 +16,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ defaultMode }) => {
   const initialMode = defaultMode || (location.pathname === '/signup' ? 'signup' : 'login');
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
 
-  const { loginWithGoogle, setUser } = useAuth();
+  const { loginWithGoogle, loginWithPassword, registerWithPassword, setUser } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -42,13 +42,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ defaultMode }) => {
     setIsSubmitting(true);
     try {
       if (mode === 'signup') {
-        const res = await authApi.register({ name, email, password });
-        setUser(res.user);
-        showToast(`Account registered in MySQL! Welcome ${res.user.name}`, 'success');
+        const user = await registerWithPassword(name, email, password);
+        showToast(`Account registered in MySQL! Welcome ${user.name}`, 'success');
       } else {
-        const res = await authApi.login({ email, password });
-        setUser(res.user);
-        showToast(`Welcome back, ${res.user.name}!`, 'success');
+        const user = await loginWithPassword(email, password);
+        showToast(`Welcome back, ${user.name}!`, 'success');
       }
       navigate('/dashboard');
     } catch (err: unknown) {
