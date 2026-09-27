@@ -207,6 +207,76 @@ export class SlackService {
     };
   }
 
+  async notifyCampaignScheduled(userId: string, campaign: {
+    campaignId: string;
+    subject: string;
+    recipientCount: number;
+    senderName: string;
+    senderEmail: string;
+    startAt: string;
+  }): Promise<boolean> {
+    const connection = await prisma.slackConnection.findUnique({ where: { userId } });
+    if (!connection) return false;
+
+    try {
+      const accessToken = decrypt(connection.encryptedAccessToken);
+      const text = `🚀 *Campaign Scheduled*: "${campaign.subject}" (${campaign.recipientCount} email${campaign.recipientCount > 1 ? 's' : ''}) via ${campaign.senderName}`;
+      const blocks = [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '🚀 Email Campaign Scheduled',
+            emoji: true
+          }
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Subject:*\n${campaign.subject}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Recipients:*\n${campaign.recipientCount} email(s)`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Sender:*\n${campaign.senderName} (${campaign.senderEmail})`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Scheduled For:*\n${new Date(campaign.startAt).toLocaleString()}`
+            }
+          ]
+        }
+      ];
+
+      if (accessToken.startsWith('http')) {
+        await fetch(accessToken, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, blocks })
+        });
+      } else {
+        const { WebClient } = await import('@slack/web-api');
+        const client = new WebClient(accessToken);
+        const channel = connection.channelId || '#reachinbox-alerts';
+        await client.chat.postMessage({
+          channel,
+          text,
+          blocks: blocks as never
+        });
+      }
+
+      return true;
+    } catch (err) {
+      console.warn('Slack campaign scheduled alert notification skipped:', err);
+      return false;
+    }
+  }
+
   async getDecryptedToken(userId: string) {
     const connection = await prisma.slackConnection.findUnique({ where: { userId } });
     if (!connection) return null;

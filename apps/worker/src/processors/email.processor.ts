@@ -132,6 +132,18 @@ export async function processEmailJob(job: Job<EmailJobData>): Promise<EmailJobR
     sendResult.success ? new Date().toISOString() : null
   );
 
+  // 7. Notify Slack workspace of successful delivery
+  if (sendResult.success) {
+    await slackNotificationService.notifyEmailSent({
+      userId: data.userId,
+      recipient: data.recipient,
+      subject: data.subject,
+      senderName: sender.name,
+      senderEmail: sender.email,
+      previewUrl: sendResult.previewUrl
+    });
+  }
+
   return {
     success: sendResult.success,
     emailId: data.emailId,

@@ -14,6 +14,7 @@ import {
   EmailJobData
 } from '@reachinbox/shared';
 import { logger } from '../utils/logger.js';
+import { slackService } from './slack.service.js';
 
 export class EmailService {
   /**
@@ -148,6 +149,18 @@ export class EmailService {
         logger.error({ err, emailId: email.id }, 'Queue publication failed, outbox recovery will retry');
       }
     }
+
+    // Send Slack alert if workspace is connected
+    slackService.notifyCampaignScheduled(userId, {
+      campaignId: campaign.id,
+      subject: data.subject,
+      recipientCount: emails.length,
+      senderName: sender.name,
+      senderEmail: sender.email,
+      startAt: campaign.startAt.toISOString()
+    }).catch((err) => {
+      logger.warn({ err }, 'Failed to send campaign schedule Slack notification');
+    });
 
     return {
       campaignId: campaign.id,

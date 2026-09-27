@@ -118,6 +118,77 @@ export class SlackNotificationService {
       return false;
     }
   }
+
+  /**
+   * Send notification to Slack when an email is successfully dispatched via SMTP.
+   */
+  async notifyEmailSent(params: {
+    userId: string;
+    recipient: string;
+    subject: string;
+    senderName: string;
+    senderEmail: string;
+    previewUrl?: string;
+  }): Promise<boolean> {
+    const slackConn = await prisma.slackConnection.findUnique({
+      where: { userId: params.userId }
+    });
+
+    if (!slackConn) return false;
+
+    try {
+      const accessToken = decrypt(slackConn.encryptedAccessToken);
+      const text = `✉️ Email delivered to *${params.recipient}* - "${params.subject}"`;
+      const blocks: any[] = [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `✉️ *Email Delivered Successfully*\n*To:* \`${params.recipient}\`\n*Subject:* ${params.subject}\n*From:* ${params.senderName} (${params.senderEmail})`
+          }
+        }
+      ];
+
+      if (params.previewUrl) {
+        blocks.push({
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: 'View Ethereal Preview ↗',
+                emoji: true
+              },
+              url: params.previewUrl
+            }
+          ]
+        });
+      }
+
+      if (accessToken.startsWith('http')) {
+        await fetch(accessToken, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, blocks })
+        });
+      } else {
+        const client = new WebClient(accessToken);
+        const channel = slackConn.channelId || '#reachinbox-alerts';
+        await client.chat.postMessage({
+          channel,
+          text,
+          blocks: blocks as never
+        });
+      }
+
+      logger.info({ recipient: params.recipient }, 'Sent email delivery Slack notification');
+      return true;
+    } catch (error) {
+      logger.warn({ error, userId: params.userId }, 'Failed to deliver email sent Slack notification');
+      return false;
+    }
+  }
 }
 
 export const slackNotificationService = new SlackNotificationService();

@@ -1,48 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { slackApi } from '../services/slack-api';
 import { senderApi } from '../services/sender-api';
-import { apiClient } from '../services/api-client';
 import { SlackConnectionDto, SenderDto } from '@reachinbox/shared';
 import { Button } from '../components/ui/Button';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import {
   Slack,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-  Shield,
-  Activity,
-  Server,
-  User,
+  Mail,
   Send,
-  Layers,
-  BellRing,
+  ExternalLink,
   Plus,
   Radio
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
   const { showToast } = useToast();
   const [slackConnection, setSlackConnection] = useState<SlackConnectionDto | null>(null);
   const [isSlackConnected, setIsSlackConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isSendingTestAlert, setIsSendingTestAlert] = useState(false);
+  const [showWebhookForm, setShowWebhookForm] = useState(false);
   const [webhookInput, setWebhookInput] = useState('');
   const [isSavingWebhook, setIsSavingWebhook] = useState(false);
   const [senders, setSenders] = useState<SenderDto[]>([]);
-  const [health, setHealth] = useState<{ status: string; services: Record<string, string> } | null>(null);
 
   const loadData = async () => {
     try {
-      const [slackRes, sendersList, healthRes] = await Promise.all([
+      const [slackRes, sendersList] = await Promise.all([
         slackApi.getStatus().catch(() => ({ connected: false, connection: undefined })),
-        senderApi.list().catch(() => []),
-        apiClient.get('/health').then((r) => r.data?.data).catch(() => null)
+        senderApi.list().catch(() => [])
       ]);
 
       setIsSlackConnected(slackRes.connected);
@@ -50,7 +39,6 @@ export const SettingsPage: React.FC = () => {
         setSlackConnection(slackRes.connection);
       }
       setSenders(sendersList);
-      setHealth(healthRes);
     } catch (err) {
       console.error('Failed to load settings data', err);
     } finally {
@@ -72,7 +60,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleDisconnectSlack = async () => {
-    if (!window.confirm('Disconnect your Slack workspace from ReachInbox rate-limit alerts?')) return;
+    if (!window.confirm('Disconnect your Slack workspace from ReachInbox notifications?')) return;
     setIsDisconnecting(true);
     try {
       await slackApi.disconnect();
@@ -98,7 +86,8 @@ export const SettingsPage: React.FC = () => {
       setSlackConnection(conn);
       setIsSlackConnected(true);
       setWebhookInput('');
-      showToast('Slack incoming webhook connected successfully!', 'success');
+      setShowWebhookForm(false);
+      showToast('Slack webhook connected successfully!', 'success');
     } catch {
       showToast('Failed to connect Slack webhook', 'error');
     } finally {
@@ -124,299 +113,159 @@ export const SettingsPage: React.FC = () => {
     return <LoadingSpinner className="py-24" size="lg" />;
   }
 
+  const activeSender = senders.find((s) => s.isActive) || senders[0];
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-6">
       {/* Title */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-950">
-          Integrations & System Settings
+          Integrations
         </h1>
         <p className="text-xs text-zinc-500 mt-1">
-          Manage third-party Slack OAuth, email sender accounts, Google profile, and system infrastructure.
+          Connected notification channels and email delivery services.
         </p>
       </div>
 
-      {/* Target Account Info Banner */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-xs">
-            <User className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-zinc-950">
-                Primary Account: {user?.email || 'vvce23cse0102@vvce.ac.in'}
-              </h2>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60">
-                Active & Verified
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Integrated with Google OAuth session and linked Slack rate-limit webhook dispatcher.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Slack Integration Card */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs space-y-5">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#4A154B] text-white shadow-xs">
-              <Slack className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-zinc-950">Slack Rate-Limit Webhook Integration</h2>
+      <div className="space-y-4">
+        {/* Slack Integration */}
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs transition-all">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#4A154B] text-white shrink-0 shadow-xs">
+                <Slack className="h-5 w-5" />
               </div>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Automatically posts real-time alerts when any sender reaches its hourly limit, ensuring zero silent drops.
-              </p>
-            </div>
-          </div>
-
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border ${
-              isSlackConnected
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-zinc-100 text-zinc-600 border-zinc-200'
-            }`}
-          >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                isSlackConnected ? 'bg-emerald-500' : 'bg-zinc-400'
-              }`}
-            />
-            {isSlackConnected ? 'Connected' : 'Not Connected'}
-          </span>
-        </div>
-
-        {isSlackConnected && slackConnection ? (
-          <div className="rounded-xl bg-zinc-50 p-4 border border-zinc-100 space-y-2 text-xs">
-            <div className="flex justify-between text-zinc-600">
-              <span className="font-medium">Connected Workspace:</span>
-              <span className="font-semibold text-zinc-900">{slackConnection.teamName}</span>
-            </div>
-            <div className="flex justify-between text-zinc-600">
-              <span className="font-medium">Notification Recipient:</span>
-              <span className="font-mono text-zinc-800">{user?.email || 'vvce23cse0102@vvce.ac.in'}</span>
-            </div>
-            <div className="flex justify-between text-zinc-600">
-              <span className="font-medium">Connected On:</span>
-              <span className="text-zinc-800">
-                {new Date(slackConnection.connectedAt).toLocaleDateString()}
-              </span>
-            </div>
-            <div className="flex justify-between text-zinc-600">
-              <span className="font-medium">Granted Scopes:</span>
-              <span className="font-mono text-zinc-800">{slackConnection.scopes}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-xl bg-zinc-50 p-4 border border-zinc-100 text-xs text-zinc-600 space-y-1.5">
-              <p className="font-medium text-zinc-900">How Slack Alerts Work:</p>
-              <p>
-                When any sender reaches its hourly limit, ReachInbox automatically reschedules remaining jobs to the next window and notifies your Slack channel for <span className="font-semibold text-zinc-900">{user?.email || 'vvce23cse0102@vvce.ac.in'}</span>.
-              </p>
-            </div>
-
-            {/* Direct Webhook URL connection option */}
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-900">Direct Incoming Webhook (Instant)</span>
-                <span className="text-[10px] text-zinc-400">Optional alternative to OAuth</span>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  placeholder="https://hooks.slack.com/services/..."
-                  value={webhookInput}
-                  onChange={(e) => setWebhookInput(e.target.value)}
-                  className="flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleSaveWebhook}
-                  isLoading={isSavingWebhook}
-                  disabled={!webhookInput}
-                >
-                  Save Webhook
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSendTestSlackAlert}
-              isLoading={isSendingTestAlert}
-              disabled={!isSlackConnected}
-              className="gap-2 text-zinc-700"
-            >
-              <BellRing className="h-3.5 w-3.5" />
-              Send Test Slack Alert
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {isSlackConnected ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnectSlack}
-                isLoading={isDisconnecting}
-                className="text-rose-600 hover:text-rose-700"
-              >
-                Disconnect Workspace
-              </Button>
-            ) : (
-              <Button size="sm" onClick={handleConnectSlack} className="gap-2 bg-[#4A154B] hover:bg-[#3d113e]">
-                <Slack className="h-4 w-4" />
-                Connect via Slack OAuth
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Senders Configuration Card */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-xs">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-zinc-950">Configured Email Senders</h2>
-              <p className="text-xs text-zinc-500">
-                SMTP test accounts, connection pooling, and sender-level rate limits
-              </p>
-            </div>
-          </div>
-          <Link to="/senders">
-            <Button size="sm" variant="outline" className="gap-2">
-              <Plus className="h-3.5 w-3.5" />
-              Manage Senders ({senders.length})
-            </Button>
-          </Link>
-        </div>
-
-        {senders.length === 0 ? (
-          <div className="rounded-xl bg-zinc-50 p-6 text-center text-xs text-zinc-500 border border-zinc-100">
-            No senders configured. Add an Ethereal SMTP test account in the Senders tab.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-            {senders.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-100 bg-zinc-50/50 p-3.5 text-xs"
-              >
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-zinc-900">{s.name}</span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-zinc-950">Slack</h2>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium border ${
+                      isSlackConnected
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-zinc-100 text-zinc-600 border-zinc-200'
+                    }`}
+                  >
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                        s.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-zinc-200 text-zinc-600'
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        isSlackConnected ? 'bg-emerald-500' : 'bg-zinc-400'
                       }`}
-                    >
-                      <Radio className="h-2 w-2" />
-                      {s.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <p className="text-zinc-500">{s.email}</p>
+                    />
+                    {isSlackConnected ? 'Connected' : 'Not Connected'}
+                  </span>
                 </div>
-                <div className="text-right text-[11px] text-zinc-500 space-y-0.5">
-                  <p className="font-mono text-zinc-700">{s.host}:{s.port}</p>
-                  <p>{s.hourlyLimit} emails/hr • {s.minimumDelaySeconds}s delay</p>
-                </div>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  {isSlackConnected && slackConnection
+                    ? `Active on workspace: ${slackConnection.teamName}`
+                    : 'Receive notifications for scheduled campaigns and rate-limit alerts.'}
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
 
-      {/* Google OAuth Profile Card */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700">
-            <Shield className="h-5 w-5" />
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              {isSlackConnected ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSendTestSlackAlert}
+                    isLoading={isSendingTestAlert}
+                    className="gap-1.5 text-xs text-zinc-700"
+                  >
+                    <Send className="h-3 w-3" />
+                    Test Notification
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDisconnectSlack}
+                    isLoading={isDisconnecting}
+                    className="text-xs text-zinc-500 hover:text-rose-600"
+                  >
+                    Disconnect
+                  </Button>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleConnectSlack}
+                    className="gap-2 bg-[#4A154B] hover:bg-[#3d113e] text-xs font-medium"
+                  >
+                    <Slack className="h-3.5 w-3.5" />
+                    Connect Slack
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowWebhookForm(!showWebhookForm)}
+                    className="text-xs"
+                  >
+                    {showWebhookForm ? 'Cancel' : 'Webhook URL'}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-semibold text-zinc-950">Google OAuth Authentication</h2>
-            <p className="text-xs text-zinc-500">Session state and cryptographic identity authentication</p>
-          </div>
+
+          {/* Optional Webhook Form */}
+          {!isSlackConnected && showWebhookForm && (
+            <form onSubmit={handleSaveWebhook} className="mt-4 pt-4 border-t border-zinc-100 flex gap-2">
+              <input
+                type="url"
+                placeholder="https://hooks.slack.com/services/..."
+                value={webhookInput}
+                onChange={(e) => setWebhookInput(e.target.value)}
+                className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50/50 px-3 py-2 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                required
+              />
+              <Button size="sm" type="submit" isLoading={isSavingWebhook} className="text-xs">
+                Connect
+              </Button>
+            </form>
+          )}
         </div>
 
-        {user && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 text-xs">
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3.5">
-              <div className="text-zinc-500 font-medium">User Name</div>
-              <div className="text-sm font-semibold text-zinc-900 mt-1">{user.name}</div>
+        {/* Email Sender (SMTP) */}
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs transition-all">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-950 text-white shrink-0 shadow-xs">
+                <Mail className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-zinc-950">Email Sender (SMTP)</h2>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium border ${
+                      activeSender
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-zinc-100 text-zinc-600 border-zinc-200'
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        activeSender ? 'bg-emerald-500' : 'bg-zinc-400'
+                      }`}
+                    />
+                    {activeSender ? 'Active' : 'No Senders'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  {activeSender
+                    ? `${activeSender.name} (${activeSender.email})`
+                    : 'Configure an SMTP sender account for dispatching outgoing emails.'}
+                </p>
+              </div>
             </div>
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3.5">
-              <div className="text-zinc-500 font-medium">Email Address</div>
-              <div className="text-sm font-semibold text-zinc-900 mt-1">{user.email}</div>
-            </div>
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3.5">
-              <div className="text-zinc-500 font-medium">Google OAuth Identity ID</div>
-              <div className="text-sm font-mono text-zinc-700 mt-1 truncate">{user.googleId}</div>
-            </div>
-          </div>
-        )}
-      </div>
 
-      {/* System Infrastructure Health Card */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-950 text-white">
-              <Activity className="h-5 w-5" />
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <Link to="/senders">
+                <Button size="sm" variant="outline" className="text-xs gap-1.5">
+                  {activeSender ? 'Manage Senders' : 'Add Sender'}
+                  <ExternalLink className="h-3 w-3 text-zinc-400" />
+                </Button>
+              </Link>
             </div>
-            <div>
-              <h2 className="text-base font-semibold text-zinc-950">System Infrastructure</h2>
-              <p className="text-xs text-zinc-500">
-                Core database, BullMQ queue, and search index operational statuses
-              </p>
-            </div>
-          </div>
-          <Link to="/queue-monitor">
-            <Button size="sm" variant="outline" className="gap-2">
-              <Activity className="h-3.5 w-3.5" />
-              Open Queue Monitor
-            </Button>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
-          <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3.5 flex items-center justify-between">
-            <span className="text-zinc-600 font-medium">MySQL Relational DB:</span>
-            <span className="font-semibold text-emerald-700 flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              {health?.services?.database || 'Connected'}
-            </span>
-          </div>
-
-          <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3.5 flex items-center justify-between">
-            <span className="text-zinc-600 font-medium">Redis + BullMQ Queue:</span>
-            <span className="font-semibold text-emerald-700 flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              {health?.services?.redis || 'Connected'}
-            </span>
-          </div>
-
-          <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3.5 flex items-center justify-between">
-            <span className="text-zinc-600 font-medium">Elasticsearch Service:</span>
-            <span className="font-semibold text-zinc-800 flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              {health?.services?.elasticsearch || 'Online'}
-            </span>
           </div>
         </div>
       </div>
