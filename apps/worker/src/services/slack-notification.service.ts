@@ -51,58 +51,67 @@ export class SlackNotificationService {
 
     try {
       const accessToken = decrypt(slackConn.encryptedAccessToken);
-      const client = new WebClient(accessToken);
-      const channel = slackConn.channelId || '#general';
       const resumeTime = new Date(params.nextWindowTimestamp).toISOString();
-
       const text = `⚠️ *Rate Limit Alert*: Sender *${params.senderName}* (<${params.senderEmail}>) has reached its configured limit of *${params.limit} emails/hour*. Remaining jobs have been safely rescheduled to resume at *${resumeTime}*.`;
 
-      await client.chat.postMessage({
-        channel,
-        text,
-        blocks: [
-          {
-            type: 'header',
-            text: {
-              type: 'plain_text',
-              text: '⚠️ ReachInbox Rate Limit Reached',
-              emoji: true
-            }
-          },
-          {
-            type: 'section',
-            fields: [
-              {
-                type: 'mrkdwn',
-                text: `*Sender:*\n${params.senderName} (${params.senderEmail})`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Configured Limit:*\n${params.limit} emails/hour`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Time Reached:*\n${new Date().toLocaleTimeString()} UTC`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Rescheduled Window:*\n${resumeTime}`
-              }
-            ]
-          },
-          {
-            type: 'context',
-            elements: [
-              {
-                type: 'mrkdwn',
-                text: 'ℹ️ No emails were dropped. BullMQ delayed jobs are safely preserved in Redis.'
-              }
-            ]
+      const blocks = [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '⚠️ ReachInbox Rate Limit Reached',
+            emoji: true
           }
-        ]
-      });
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Sender:*\n${params.senderName} (${params.senderEmail})`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Configured Limit:*\n${params.limit} emails/hour`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Time Reached:*\n${new Date().toLocaleTimeString()} UTC`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Rescheduled Window:*\n${resumeTime}`
+            }
+          ]
+        },
+        {
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: 'ℹ️ No emails were dropped. BullMQ delayed jobs are safely preserved in Redis.'
+            }
+          ]
+        }
+      ];
 
-      logger.info({ senderId: params.senderId, channel }, 'Sent rate-limit Slack notification');
+      if (accessToken.startsWith('http')) {
+        await fetch(accessToken, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, blocks })
+        });
+      } else {
+        const client = new WebClient(accessToken);
+        const channel = slackConn.channelId || '#general';
+        await client.chat.postMessage({
+          channel,
+          text,
+          blocks: blocks as never
+        });
+      }
+
+      logger.info({ senderId: params.senderId }, 'Sent rate-limit Slack notification');
       return true;
     } catch (error) {
       logger.warn({ error, userId: params.userId }, 'Failed to deliver Slack notification (continuing safely)');

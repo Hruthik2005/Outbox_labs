@@ -16,6 +16,11 @@ export const slackApi = {
     await apiClient.post('/slack/disconnect');
   },
 
+  async connectWebhook(webhookUrl: string, channelName?: string): Promise<SlackConnectionDto> {
+    const res = await apiClient.post<ApiResponse<SlackConnectionDto>>('/slack/webhook', { webhookUrl, channelName });
+    return res.data.data!;
+  },
+
   async sendTestAlert(): Promise<{ message: string }> {
     const res = await apiClient.post<ApiResponse<{ message: string }>>('/slack/test');
     return res.data.data!;

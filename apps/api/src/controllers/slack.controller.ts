@@ -60,6 +60,21 @@ export class SlackController {
     }
   }
 
+  async connectWebhook(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.userId!;
+      const { webhookUrl, channelName } = req.body;
+      if (!webhookUrl || !webhookUrl.startsWith('http')) {
+        sendError(res, 'Valid webhook URL starting with http(s):// is required', 400, 'INVALID_WEBHOOK_URL');
+        return;
+      }
+      const connection = await slackService.connectWebhook(userId, webhookUrl, channelName);
+      sendSuccess(res, connection);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async sendTestAlert(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.userId!;

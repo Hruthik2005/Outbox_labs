@@ -22,7 +22,8 @@ export const AppRoutes: React.FC = () => {
       </Route>
 
       {/* Authentication */}
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<LoginPage defaultMode="login" />} />
+      <Route path="/signup" element={<LoginPage defaultMode="signup" />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
       {/* Protected Dashboard Routes */}

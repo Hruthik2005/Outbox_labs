@@ -102,64 +102,109 @@ export class SlackService {
     }
 
     try {
-      const { WebClient } = await import('@slack/web-api');
       const accessToken = decrypt(connection.encryptedAccessToken);
-      const client = new WebClient(accessToken);
-      const channel = connection.channelId || '#general';
-
       const user = await prisma.user.findUnique({ where: { id: userId } });
       const userEmail = user?.email || 'vvce23cse0102@vvce.ac.in';
+      const text = `✅ ReachInbox Slack Integration Verified for ${userEmail}`;
 
-      await client.chat.postMessage({
-        channel,
-        text: `✅ ReachInbox Slack Integration Verified for ${userEmail}`,
-        blocks: [
-          {
-            type: 'header',
-            text: {
-              type: 'plain_text',
-              text: '🔔 ReachInbox Slack Integration Test',
-              emoji: true
-            }
-          },
-          {
-            type: 'section',
-            fields: [
-              {
-                type: 'mrkdwn',
-                text: `*Status:*\n✅ Connected & Verified`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Target Account:*\n${userEmail}`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Workspace:*\n${connection.teamName}`
-              },
-              {
-                type: 'mrkdwn',
-                text: `*Channel:*\n${connection.channelName || channel}`
-              }
-            ]
-          },
-          {
-            type: 'context',
-            elements: [
-              {
-                type: 'mrkdwn',
-                text: '⚡ Real-time alerts will automatically notify this channel when email rate limits are triggered.'
-              }
-            ]
+      const blocks = [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '🔔 ReachInbox Slack Integration Test',
+            emoji: true
           }
-        ]
-      });
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Status:*\n✅ Connected & Verified`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Target Account:*\n${userEmail}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Workspace:*\n${connection.teamName}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Channel:*\n${connection.channelName || connection.channelId || '#general'}`
+            }
+          ]
+        },
+        {
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: '⚡ Real-time alerts will automatically notify this channel when email rate limits are triggered.'
+            }
+          ]
+        }
+      ];
+
+      if (accessToken.startsWith('http')) {
+        await fetch(accessToken, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, blocks })
+        });
+      } else {
+        const { WebClient } = await import('@slack/web-api');
+        const client = new WebClient(accessToken);
+        const channel = connection.channelId || '#general';
+        await client.chat.postMessage({
+          channel,
+          text,
+          blocks: blocks as never
+        });
+      }
 
       return { success: true, message: `Test message posted to Slack workspace (${connection.teamName})` };
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       return { success: false, message: `Slack delivery failed: ${errorMsg}` };
     }
+  }
+
+  async connectWebhook(userId: string, webhookUrl: string, channelName?: string): Promise<SlackConnectionDto> {
+    const encryptedAccessToken = encrypt(webhookUrl);
+    const connection = await prisma.slackConnection.upsert({
+      where: { userId },
+      update: {
+        teamId: 'webhook_team',
+        teamName: 'Custom Slack Workspace',
+        channelId: channelName || '#general',
+        channelName: channelName || '#general',
+        encryptedAccessToken,
+        scopes: 'incoming-webhook',
+        updatedAt: new Date()
+      },
+      create: {
+        userId,
+        teamId: 'webhook_team',
+        teamName: 'Custom Slack Workspace',
+        channelId: channelName || '#general',
+        channelName: channelName || '#general',
+        encryptedAccessToken,
+        scopes: 'incoming-webhook'
+      }
+    });
+
+    return {
+      id: connection.id,
+      userId: connection.userId,
+      teamId: connection.teamId,
+      teamName: connection.teamName,
+      scopes: connection.scopes,
+      connectedAt: connection.connectedAt.toISOString(),
+      updatedAt: connection.updatedAt.toISOString()
+    };
   }
 
   async getDecryptedToken(userId: string) {
