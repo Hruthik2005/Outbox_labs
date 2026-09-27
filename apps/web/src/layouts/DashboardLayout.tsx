@@ -25,14 +25,14 @@ export const DashboardLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col md:flex-row">
-      {/* Desktop Sidebar (Left side, sticky) */}
-      <div className="hidden md:block shrink-0">
+    <div className="h-screen h-[100dvh] overflow-hidden bg-[#FAFAFA] flex flex-col md:flex-row">
+      {/* Desktop Sidebar (Left side, sticky & fixed) */}
+      <div className="hidden md:flex md:flex-col shrink-0 h-screen sticky top-0 z-20">
         <Sidebar />
       </div>
 
       {/* Mobile Top Header */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-zinc-200">
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-zinc-200 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-xs">
             <Mail className="h-4 w-4" />
@@ -58,14 +58,14 @@ export const DashboardLayout: React.FC = () => {
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileSidebarOpen(false)}
           />
-          <div className="relative z-50 w-64 bg-white shadow-xl">
+          <div className="relative z-50 w-64 bg-white shadow-xl h-full">
             <Sidebar onCloseMobile={() => setMobileSidebarOpen(false)} />
           </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-8 py-8">
+      <main className="flex-1 min-w-0 min-h-0 h-full overflow-y-auto px-4 sm:px-8 py-8">
         <Outlet />
       </main>
     </div>

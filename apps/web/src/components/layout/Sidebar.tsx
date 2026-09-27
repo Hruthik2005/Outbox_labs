@@ -34,9 +34,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     }`;
 
   return (
-    <aside className="w-64 bg-white border-r border-zinc-200/80 flex flex-col h-screen select-none">
+    <aside className="w-64 bg-white border-r border-zinc-200/80 flex flex-col h-full select-none">
       {/* Brand Header matching screenshot */}
-      <div className="p-5 flex items-center gap-3">
+      <div className="p-5 flex items-center gap-3 shrink-0">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-xs">
           <Mail className="h-4 w-4" />
         </div>
@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         </span>
       </div>
 
-      <div className="h-px bg-zinc-100 mx-5" />
+      <div className="h-px bg-zinc-100 mx-5 shrink-0" />
 
       {/* Navigation Sections */}
       <div className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
@@ -122,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       </div>
 
       {/* Footer User Profile Card */}
-      <div className="p-4 border-t border-zinc-100 bg-white">
+      <div className="p-4 border-t border-zinc-100 bg-white shrink-0">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             {user?.avatarUrl ? (
